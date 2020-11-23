@@ -2,7 +2,6 @@ const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
 const GOODREADS = 'https://www.goodreads.com/api/reviews_widget_iframe?did=75732&format=html'
 
 // We need a class for search result card
-
 class List {
   constructor(type, name) {
     this.type = type
@@ -44,8 +43,14 @@ class List {
   }
 }
 
+class Library extends List {
+  constructor(type, name) {
+    super(type, name)
+  }
+}
+
 class Book {
-  constructor(data, type) {
+  constructor(data) {
     this.id = data.id
     this.title = data.title
     this.author = data.author
@@ -56,7 +61,27 @@ class Book {
     this.thumbnail = data.thumbnail
     this.rating = data.rating
     this.isbn = data.isbn
-    this.tags = []    
+    this.tags = [] 
+  }
+
+  addTag(tag) {
+    this.tags.push(tag)
+  }
+
+  removeTag(tag) {
+    let index = this.tags.findIndex(tag)
+    if (index !== -1)
+      this.tags.splice(index, 1)
+  }
+
+  removeAllTags() {
+    this.tags = []
+  }
+}
+
+class BookCard extends Book {
+  constructor(data, type) {
+    super(data)
     this.frontElement = document.createElement('div')
     this.backElement = document.createElement('div')
     this.elementType = type || 'card'
@@ -78,11 +103,15 @@ class Book {
     this.frontElement.appendChild(title)
     this.frontElement.appendChild(author)
 
+    this.frontElement.addEventListener('click', () => {
+      this.backElement.style.display = 'block'
+    })
+
     return this.frontElement
   }
   
   renderBackOfCard() {
-    this.backElement.classList.add(`${this.elementType}-back`)
+    this.backElement.classList.add(`modal`)
     let title = document.createElement('p'),
       author = document.createElement('span'),
       datePublished = document.createElement('span'),
@@ -93,7 +122,9 @@ class Book {
       reviews = document.createElement('div'),
       reviewsIframe = document.createElement('iframe'),
       dateRead = document.createElement('input'),
-      dateFinished = document.createElement('input')
+      dateFinished = document.createElement('input'),
+      modalContent = document.createElement('div'),
+      closeButton = document.createElement('span')
  
     const convertToStars = noOfStars => {
       if (!noOfStars || noOfStars === "") {
@@ -121,6 +152,7 @@ class Book {
     publisher.textContent = `Published by ${this.publisher}`
     dateRead.type = 'date'
     dateFinished.type = 'date'
+    closeButton.textContent = 'X'
 
     title.classList.add('header-back')    
     author.classList.add('subtitle-back')    
@@ -131,35 +163,41 @@ class Book {
     publisher.classList.add('footer')
     dateRead.classList.add('date-input')    
     dateFinished.classList.add('date-input')
+    modalContent.classList.add('modal-content')
+    closeButton.classList.add('close')
 
     reviewsIframe.id = 'reviews'
     reviewsIframe.src = `${GOODREADS}&isbn=${this.isbn}`
     reviews.id = 'goodreads-widget'
     reviews.appendChild(reviewsIframe)   
 
-    let elements = [title, author, datePublished, pageCount, rating, desc, publisher, reviews, dateRead, dateFinished]
-    elements.forEach(child => this.backElement.appendChild(child))
+    closeButton.addEventListener('click', (e) => {
+      this.backElement.style.display = 'none'
+      e.stopPropagation()
+    })
+
+    let elements = [closeButton, title, author, datePublished, pageCount, rating, desc, publisher, reviews, dateRead, dateFinished]
+    elements.forEach(child => modalContent.appendChild(child))
+
+    this.backElement.appendChild(modalContent)
+    this.backElement.addEventListener('click', (e) => {
+      let targetClass = Array.from(e.target.classList)
+      if (targetClass.includes('modal'))
+        this.backElement.style.display = 'none'
+    })
 
     return this.backElement
   }
-
-  addTag(tag) {
-    this.tags.push(tag)
-  }
-
-  removeTag(tag) {
-    let index = this.tags.findIndex(tag)
-    if (index !== -1)
-      this.tags.splice(index, 1)
-  }
-
-  removeAllTags() {
-    this.tags = []
-  }
 }
 
-let params = {
+let params1 = {
   title: 'The Girl With The Dragon Tattoo',
+  author: 'Stieg Larsson',
+  publisher: '',
+}
+
+let params2 = {
+  title: 'The Girl With Who Kicked Hornet\'s Nest',
   author: 'Stieg Larsson',
   publisher: '',
 }
@@ -192,7 +230,7 @@ const getBookData = (params) => {
       }
 
       let shelf = new List('shelf', 'read')
-      let book = new Book(bookDetails)
+      let book = new BookCard(bookDetails)
       
       shelf.addItem([book, book, book, book, book])
       
@@ -206,4 +244,5 @@ const getBookData = (params) => {
     })
 }
 
-getBookData(params)
+getBookData(params1)
+getBookData(params2)
