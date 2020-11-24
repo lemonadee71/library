@@ -101,6 +101,7 @@ class BookCard extends Book {
     this.front = document.createElement('div')
     this.back = document.createElement('div')
     this.frontElements = {
+      removeBtn: document.createElement('span'),
       img: document.createElement('img'),
       title: document.createElement('p'),
       author: document.createElement('p'),      
@@ -129,16 +130,21 @@ class BookCard extends Book {
       this.back.appendChild(element)
   }
 
-  renderFrontOfCard() {
+  renderFrontOfCard(callback) {
     this.front.classList.add('front')
 
+    this.frontElements.removeBtn.innerHTML = '&times;'
     this.frontElements.title.textContent = this.title
     this.frontElements.author.textContent = this.author
 
+    this.frontElements.removeBtn.classList.add('close')
     this.frontElements.title.classList.add('header')
     this.frontElements.author.classList.add('subtitle')
 
     this.frontElements.img.src = this.thumbnail
+
+    this.frontElements.removeBtn.setAttribute('data-id', this.id)
+    this.frontElements.removeBtn.addEventListener('click', callback)
     
     for (let elem in this.frontElements) {
       this.addElement('front', this.frontElements[elem])
@@ -157,9 +163,9 @@ class BookCard extends Book {
     // Add text
     this.backElements.title.textContent = this.title
     this.backElements.author.textContent = this.author
-    this.backElements.datePublished.textContent = this.publishedDate.slice(0, 4)
+    this.backElements.datePublished.textContent = this.publishedDate.slice(0,4)
     this.backElements.pageCount.textContent = `${this.pageCount} pages`
-    this.backElements.rating.textContent = `${convertRatingToStars(this.rating)}`
+    this.backElements.rating.textContent = `${this.rating}`
     this.backElements.desc.textContent = this.description
     this.backElements.publisher.textContent = `Published by ${this.publisher}`
 
@@ -206,8 +212,8 @@ class BookCard extends Book {
     return this.back;
   }
 
-  render() {  
-    this.renderFrontOfCard()
+  render(callback) {  
+    this.renderFrontOfCard(callback)
     this.renderBackOfCard()
     this.card.appendChild(this.front)
     this.card.appendChild(this.back)
@@ -267,9 +273,17 @@ class Library extends List {
     // Band-aid solution
     let card = document.createElement('div')
     card.classList.add('card')
+    card.id = book.id
     card.appendChild(book.front)
     card.appendChild(book.back)
     this.element.appendChild(card)
+  }
+
+  removeFromDOM(id) {
+    this.removeItem((item) => {
+      return item.id === id
+    })
+    this.element.removeChild(document.getElementById(id))
   }
 }
 
@@ -305,7 +319,7 @@ const App = (doc => {
       pageCount: item.volumeInfo.pageCount,
       publishedDate: item.volumeInfo.publishedDate,
       publisher: item.volumeInfo.publisher,
-      thumbnail: item.volumeInfo.imageLinks.thumbnail,
+      thumbnail: item.volumeInfo.imageLinks.thumbnail || '',
       rating: item.volumeInfo.averageRating,
       isbn,
     }
@@ -321,6 +335,17 @@ const App = (doc => {
       .then(results => results.items)
   }
 
+  const _removeBook = (e) => {
+    let bookId = e.target.getAttribute('data-id')
+    library.removeFromDOM(bookId)
+  }
+
+  const _addBook = (data) => {
+    let book = new BookCard(getBookData(data))
+    book.render(_removeBook)
+    library.addToDOM(book)
+  }
+
   const _showSearchModal = () => {
     searchModal.style.display = 'block' 
   }
@@ -333,7 +358,10 @@ const App = (doc => {
   const _renderResults = (results) => {
     results.forEach(item => {
       let result = new BookCardVariant(getBookData(item))
-      searchResults.appendChild(result.render())
+      result = result.render(() => {
+        _addBook(item)
+      })
+      searchResults.appendChild(result)
     })   
   }
 
