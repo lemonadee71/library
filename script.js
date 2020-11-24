@@ -1,17 +1,183 @@
 const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
 const GOODREADS = 'https://www.goodreads.com/api/reviews_widget_iframe?did=75732&format=html'
 
-// We need a class for search result card
+class Book {
+  constructor(data) {
+    this.id = data.id
+    this.title = data.title
+    this.author = data.author
+    this.description = data.description
+    this.pageCount = data.pageCount
+    this.publishedDate = data.publishedDate
+    this.publisher = data.publisher
+    this.thumbnail = data.thumbnail
+    this.rating = data.rating
+    this.isbn = data.isbn
+    this.tags = [] 
+  }
+
+  addTag(tag) {
+    this.tags.push(tag)
+  }
+
+  removeTag(tag) {
+    let index = this.tags.findIndex(tag)
+    if (index !== -1)
+      this.tags.splice(index, 1)
+  }
+
+  removeAllTags() {
+    this.tags = []
+  }
+}
+
+class BookCard extends Book {
+  constructor(data) {
+    super(data)
+    this.card = document.createElement('div')
+    this.front = document.createElement('div')
+    this.back = document.createElement('div')
+    this.frontElements = {
+      img: document.createElement('img'),
+      title: document.createElement('p'),
+      author: document.createElement('p'),      
+    }
+    this.backElements = {
+      closeButton: document.createElement('span'),
+      title: document.createElement('p'),
+      author: document.createElement('span'),
+      datePublished: document.createElement('span'),
+      rating: document.createElement('span'),
+      pageCount: document.createElement('span'),
+      desc: document.createElement('p'),
+      publisher: document.createElement('p'),
+      reviews: document.createElement('div'),
+      reviewsIframe: document.createElement('iframe'),
+      dateRead: document.createElement('input'),
+      dateFinished: document.createElement('input'),
+      modalContent: document.createElement('div'),  
+    }    
+  }
+
+  static convertRatingToStars() {
+    if (!this.rating || this.rating === "") {
+      return null;
+    }
+  
+    let decimal = +this.rating - Math.floor(+this.rating);
+    let stars = "\u2605".repeat(Math.floor(+this.rating));
+  
+    if (decimal <= 0.25 && decimal > 0) stars = stars + "\u00BC";
+    else if (decimal <= 0.5 && decimal > 0) stars = stars + "\u00BD";
+    else if (decimal <= 0.75 && decimal > 0) stars = stars + "\u00BE";
+    else if (decimal < 1 && decimal > 0) stars = stars + "\u2605";
+  
+    return stars;
+  };
+
+  addElement(face, element) {
+    if (face === 'front')
+      this.front.appendChild(element)
+    else if (face === 'back')
+      this.back.appendChild(element)
+  }
+
+  renderFrontOfCard() {
+    this.front.classList.add('front')
+
+    this.frontElements.title.textContent = this.title
+    this.frontElements.author.textContent = this.author
+
+    this.frontElements.title.classList.add('header')
+    this.frontElements.author.classList.add('subtitle')
+
+    this.frontElements.img.src = this.thumbnail
+    
+    for (let elem in this.frontElements) {
+      this.addElement('front', this.frontElements[elem])
+    }
+
+    this.front.addEventListener('click', () => {
+      this.back.style.display = 'block'
+    })
+
+    return this.front;
+  }
+  
+  renderBackOfCard() {
+    this.back.classList.add(`modal`)   
+    
+    // Add text
+    this.backElements.title.textContent = this.title
+    this.backElements.author.textContent = this.author
+    this.backElements.datePublished.textContent = this.publishedDate.slice(0, 4)
+    this.backElements.pageCount.textContent = `${this.pageCount} pages`
+    this.backElements.rating.textContent = `${BookCard.convertRatingToStars()}`
+    this.backElements.desc.textContent = this.description
+    this.backElements.publisher.textContent = `Published by ${this.publisher}`
+
+    // Add classes
+    this.backElements.title.classList.add('header-back')    
+    this.backElements.author.classList.add('subtitle-back')    
+    this.backElements.datePublished.classList.add('subtitle-back')    
+    this.backElements.pageCount.classList.add('subtitle-back')    
+    this.backElements.rating.classList.add('rating')    
+    this.backElements.desc.classList.add('content')    
+    this.backElements.publisher.classList.add('footer')
+    this.backElements.dateRead.classList.add('date-input')    
+    this.backElements.dateFinished.classList.add('date-input')
+    this.backElements.modalContent.classList.add('modal-content')
+    this.backElements.closeButton.classList.add('close')
+
+    this.backElements.dateRead.type = 'date'
+    this.backElements.dateFinished.type = 'date'
+    this.backElements.closeButton.innerHTML = '&times;'
+
+    // Render Goodreads reviews iframe
+    this.backElements.reviewsIframe.id = 'reviews'
+    this.backElements.reviewsIframe.src = `${GOODREADS}&isbn=${this.isbn}`
+    this.backElements.reviews.id = 'goodreads-widget'
+    this.backElements.reviews.appendChild(this.backElements.reviewsIframe)   
+
+    this.backElements.closeButton.addEventListener('click', (e) => {
+      this.back.style.display = 'none'
+      e.stopPropagation()
+    })
+
+    for (let elem in this.backElements) { 
+      if (elem !== 'modalContent')
+        this.backElements.modalContent.appendChild(this.backElements[elem])
+    }
+
+    this.back.appendChild(this.backElements.modalContent)
+    this.back.addEventListener('click', (e) => {
+      let targetClass = Array.from(e.target.classList)
+      if (targetClass.includes('modal'))
+        this.back.style.display = 'none'
+    })
+  
+    return this.back;
+  }
+
+  render() {  
+    this.renderFrontOfCard()
+    this.renderBackOfCard()
+    this.card.appendChild(this.front)
+    this.card.appendChild(this.back)
+   
+    return this.card
+  }
+}
+
 class List {
-  constructor(type, name) {
+  constructor(type) {
     this.type = type
-    this.name = name
     this.items = []
     this.length = 0
   }
 
   addItem(item) {
-    this.items.push(...item)
+    this.items.push(item)
     this.length = this.items.length
   }
 
@@ -44,205 +210,62 @@ class List {
 }
 
 class Library extends List {
-  constructor(type, name) {
-    super(type, name)
+  constructor(element) {
+    super('library')
+    this.element = element
+  }
+
+  addToDOM(book) {
+    super.addItem(book)   
+    // Band-aid solution
+    let card = document.createElement('div')
+    card.classList.add('card')
+    card.appendChild(book.front)
+    card.appendChild(book.back)
+    this.element.appendChild(card)
   }
 }
 
-class Book {
-  constructor(data) {
-    this.id = data.id
-    this.title = data.title
-    this.author = data.author
-    this.description = data.description
-    this.pageCount = data.pageCount
-    this.publishedDate = data.publishedDate
-    this.publisher = data.publisher
-    this.thumbnail = data.thumbnail
-    this.rating = data.rating
-    this.isbn = data.isbn
-    this.tags = [] 
+const App = (doc => {
+  let params = (title, author) => {
+    return {
+      title,
+      author
+    }
   }
 
-  addTag(tag) {
-    this.tags.push(tag)
+  const getBookData = (item) => {
+    let industryIdentifiers = item.volumeInfo.industryIdentifiers.length
+    let isbn
+    if (industryIdentifiers) {
+      isbn = item.volumeInfo.industryIdentifiers[0].identifier ||
+            item.volumeInfo.industryIdentifiers[1].identifier 
+    }
+
+    let book = {
+      id: item.id,
+      title: item.volumeInfo.title,
+      author: item.volumeInfo.authors[0],
+      description: item.volumeInfo.description,
+      rating: item.volumeInfo.averageRating,
+      pageCount: item.volumeInfo.pageCount,
+      publishedDate: item.volumeInfo.publishedDate,
+      publisher: item.volumeInfo.publisher,
+      thumbnail: item.volumeInfo.imageLinks.thumbnail,
+      rating: item.volumeInfo.averageRating,
+      isbn,
+    }
+
+    return book;
   }
 
-  removeTag(tag) {
-    let index = this.tags.findIndex(tag)
-    if (index !== -1)
-      this.tags.splice(index, 1)
-  }
-
-  removeAllTags() {
-    this.tags = []
-  }
-}
-
-class BookCard extends Book {
-  constructor(data, type) {
-    super(data)
-    this.frontElement = document.createElement('div')
-    this.backElement = document.createElement('div')
-    this.elementType = type || 'card'
-  }
-
-  renderFrontOfCard() {
-    this.frontElement.classList.add(this.elementType)
-    let title = document.createElement('p'),
-      author = document.createElement('p'),
-      img = document.createElement('img')
-
-    title.textContent = this.title
-    title.classList.add('header')
-    author.textContent = this.author
-    author.classList.add('subtitle')
-    img.src = this.thumbnail
-    
-    this.frontElement.appendChild(img)
-    this.frontElement.appendChild(title)
-    this.frontElement.appendChild(author)
-
-    this.frontElement.addEventListener('click', () => {
-      this.backElement.style.display = 'block'
-    })
-
-    return this.frontElement
-  }
+  const getSearchResults = (params) => {
+    let endString = params.publisher ? `+inpublisher:${params.publisher}` : ''
   
-  renderBackOfCard() {
-    this.backElement.classList.add(`modal`)
-    let title = document.createElement('p'),
-      author = document.createElement('span'),
-      datePublished = document.createElement('span'),
-      rating = document.createElement('span'),
-      pageCount = document.createElement('span'),
-      desc = document.createElement('p'),
-      publisher = document.createElement('p'),
-      reviews = document.createElement('div'),
-      reviewsIframe = document.createElement('iframe'),
-      dateRead = document.createElement('input'),
-      dateFinished = document.createElement('input'),
-      modalContent = document.createElement('div'),
-      closeButton = document.createElement('span')
- 
-    const convertToStars = noOfStars => {
-      if (!noOfStars || noOfStars === "") {
-        return null;
-      }
-    
-      noOfStars = parseFloat(noOfStars);
-      let decimal = noOfStars - Math.floor(noOfStars);
-      let stars = "\u2605".repeat(Math.floor(noOfStars));
-    
-      if (decimal <= 0.25 && decimal > 0) stars = stars + "\u00BC";
-      else if (decimal <= 0.5 && decimal > 0) stars = stars + "\u00BD";
-      else if (decimal <= 0.75 && decimal > 0) stars = stars + "\u00BE";
-      else if (decimal < 1 && decimal > 0) stars = stars + "\u2605";
-    
-      return stars;
-    };
-    
-    title.textContent = this.title
-    author.textContent = this.author
-    datePublished.textContent = this.publishedDate.slice(0, 4)
-    pageCount.textContent = `${this.pageCount} pages`
-    rating.textContent = `${convertToStars(this.rating)}`
-    desc.textContent = this.description
-    publisher.textContent = `Published by ${this.publisher}`
-    dateRead.type = 'date'
-    dateFinished.type = 'date'
-    closeButton.textContent = 'X'
-
-    title.classList.add('header-back')    
-    author.classList.add('subtitle-back')    
-    datePublished.classList.add('subtitle-back')    
-    pageCount.classList.add('subtitle-back')    
-    rating.classList.add('rating')    
-    desc.classList.add('content')    
-    publisher.classList.add('footer')
-    dateRead.classList.add('date-input')    
-    dateFinished.classList.add('date-input')
-    modalContent.classList.add('modal-content')
-    closeButton.classList.add('close')
-
-    reviewsIframe.id = 'reviews'
-    reviewsIframe.src = `${GOODREADS}&isbn=${this.isbn}`
-    reviews.id = 'goodreads-widget'
-    reviews.appendChild(reviewsIframe)   
-
-    closeButton.addEventListener('click', (e) => {
-      this.backElement.style.display = 'none'
-      e.stopPropagation()
-    })
-
-    let elements = [closeButton, title, author, datePublished, pageCount, rating, desc, publisher, reviews, dateRead, dateFinished]
-    elements.forEach(child => modalContent.appendChild(child))
-
-    this.backElement.appendChild(modalContent)
-    this.backElement.addEventListener('click', (e) => {
-      let targetClass = Array.from(e.target.classList)
-      if (targetClass.includes('modal'))
-        this.backElement.style.display = 'none'
-    })
-
-    return this.backElement
+    fetch(`${GOOGLE_BOOKS}q=${params.title}+inauthor:${params.author}${endString}`)
+      .then(response => response.json())
+      .then(results => results.items)
   }
-}
 
-let params1 = {
-  title: 'The Girl With The Dragon Tattoo',
-  author: 'Stieg Larsson',
-  publisher: '',
-}
 
-let params2 = {
-  title: 'The Girl With Who Kicked Hornet\'s Nest',
-  author: 'Stieg Larsson',
-  publisher: '',
-}
-
-const getBookData = (params) => {
-  let endString = params.publisher ? `+inpublisher:${params.publisher}` : ''
-
-  fetch(`${GOOGLE_BOOKS}q=${params.title}+inauthor:${params.author}${endString}`)
-    .then(response => response.json())
-    .then(data => {
-      let industryIdentifiers = data.items[0].volumeInfo.industryIdentifiers.length
-      let isbn
-      if (industryIdentifiers) {
-        isbn = data.items[0].volumeInfo.industryIdentifiers[0].identifier ||
-                  data.items[0].volumeInfo.industryIdentifiers[1].identifier 
-      }
-
-      let bookDetails = {
-        id: data.items[0].id,
-        title: data.items[0].volumeInfo.title,
-        author: data.items[0].volumeInfo.authors[0],
-        description: data.items[0].volumeInfo.description,
-        rating: data.items[0].volumeInfo.averageRating,
-        pageCount: data.items[0].volumeInfo.pageCount,
-        publishedDate: data.items[0].volumeInfo.publishedDate,
-        publisher: data.items[0].volumeInfo.publisher,
-        thumbnail: data.items[0].volumeInfo.imageLinks.thumbnail,
-        rating: data.items[0].volumeInfo.averageRating,
-        isbn,
-      }
-
-      let shelf = new List('shelf', 'read')
-      let book = new BookCard(bookDetails)
-      
-      shelf.addItem([book, book, book, book, book])
-      
-      let body = document.getElementById('library')
-      body.appendChild(book.renderFrontOfCard())
-      body.appendChild(book.renderBackOfCard())
-      book.addTag('Fiction')
-      //shelf.removeItem((book) => {return book.title === '1984'})
-      console.log(shelf.items)
-      console.log(data)
-    })
-}
-
-getBookData(params1)
-getBookData(params2)
+})(document)

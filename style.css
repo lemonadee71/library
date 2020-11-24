@@ -14,10 +14,6 @@ header {
   margin-bottom: 30px;
 }
 
-button#add {
-  float: right;
-}
-
 #library {
   background-color: salmon;
   display: grid;
@@ -25,14 +21,14 @@ button#add {
   column-gap: 15px;
 }
 
-.card {
+.front {
   background-color: antiquewhite;
   min-height: 20vw;
   text-align: center;
   border: 1px solid black;
 }
 
-.card img {
+.front img {
   width: 80%;
 }
 
@@ -56,7 +52,7 @@ button#add {
   margin: 2% auto; /* 15% from the top and centered */
   padding: 20px;
   border: 1px solid #888;
-  width: 50%; /* Could be more or less, depending on screen size */
+  width: 30%; /* Could be more or less, depending on screen size */
 }
 
 .close {
