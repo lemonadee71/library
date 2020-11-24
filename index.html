@@ -17,6 +17,24 @@
     <div class="container">
       <div id="library">
       </div>
+      <div class="modal" id="searchModal">
+        <div class="modal-content wide">
+          <form id="searchForm">
+            <div>
+              <label for="title">Title</label>
+              <input type="text" id="search-title" name="title" placeholder="Title">
+            </div>
+            <div>
+              <label for="author">Author</label>
+              <input type="text" id="search-author" name="author" placeholder="Author">
+            </div>           
+            <input type="submit" value="Submit">
+          </form>
+          <div id="searchResults">
+            
+          </div>
+        </div>
+      </div>
     </div>
   </main>
   <script src="script.js"></script>  
