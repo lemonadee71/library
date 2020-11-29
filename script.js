@@ -2,13 +2,13 @@ const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
 const GOODREADS = 'https://www.goodreads.com/api/reviews_widget_iframe?did=75732&format=html'
 
 class Book {
-  static convertRatingToStars () {
-    if (this.rating || this.rating === "") {
+  static convertRatingToStars (rating) {
+    if (rating || rating === "") {
       return null;
     }
   
-    let decimal = +this.rating - Math.floor(+this.rating);
-    let stars = "\u2605".repeat(Math.floor(+this.rating));
+    let decimal = +rating - Math.floor(+rating);
+    let stars = "\u2605".repeat(Math.floor(+rating));
   
     if (decimal <= 0.25 && decimal > 0) stars = stars + "\u00BC";
     else if (decimal <= 0.5 && decimal > 0) stars = stars + "\u00BD";
@@ -27,8 +27,9 @@ class Book {
     this.publishedDate = data.publishedDate
     this.publisher = data.publisher
     this.thumbnail = data.thumbnail
-    this.rating = Book.convertRatingToStars()
+    this.rating = Book.convertRatingToStars(data.rating)
     this.isbn = data.isbn
+    this.status = 'to-read'
     this.tags = [] 
   }
 
@@ -113,6 +114,7 @@ class BookCard extends Book {
       datePublished: document.createElement('span'),
       rating: document.createElement('span'),
       pageCount: document.createElement('span'),
+      /*status: document.createElement('select'),*/
       desc: document.createElement('p'),
       publisher: document.createElement('p'),
       reviews: document.createElement('div'),
@@ -121,6 +123,17 @@ class BookCard extends Book {
       dateFinished: document.createElement('input'),
       modalContent: document.createElement('div'),  
     }    
+  }
+
+  addElements(face, list) {
+    for (type in list) {
+      if (face === 'front') {
+        this.frontElements[type] = document.createElement(list[type])
+      }        
+      else if (face === 'back') {
+        this.backElements[type] = document.createElement(list[type])
+      }        
+    }
   }
 
   addElement(face, element) {
@@ -285,13 +298,33 @@ class Library extends List {
     })
     this.element.removeChild(document.getElementById(id))
   }
+
+  filter(flag, str) {
+    this.items.forEach(book => {
+      switch (flag) {
+        case ':':
+          if (book.author.indexOf(str) !== -1)
+            book.front.style.display = 'none'
+          else
+            book.front.style.display = 'block'
+          break;
+        default:
+          if (book.title.indexOf(str) !== -1)
+            book.front.style.display = 'none'
+          else
+            book.front.style.display = 'block'
+          break;
+      }
+    })
+  }
 }
 
 const App = (doc => {
   let searchBtn = doc.getElementById('searchBook'),
     searchModal = doc.getElementById('searchModal'),
     searchForm = doc.getElementById('searchForm'),
-    searchResults = doc.getElementById('searchResults')
+    searchResults = doc.getElementById('searchResults'),
+    filter = doc.getElementById('filter')
 
   const library = new Library(doc.getElementById('library'))
 
@@ -375,10 +408,16 @@ const App = (doc => {
     _renderResults(results)
   }
 
+  const _filterBooks = () => {
+    let str = filter.value
+    library.filter('', str)
+  }
+
   const initialize = () => {
     searchBtn.addEventListener('click', _showSearchModal)
     searchModal.addEventListener('click', _hideSearchModal)
     searchForm.addEventListener('submit', _searchBook)
+    filter.addEventListener('keyup', _filterBooks)
   }
 
   return {

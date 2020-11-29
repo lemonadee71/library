@@ -16,9 +16,11 @@ header {
 
 #library {
   background-color: salmon;
-  display: grid;
+  display: flex;
+  /*
   grid-template-columns: repeat(6, 1fr);
   column-gap: 15px;
+  */
 }
 
 .front {
