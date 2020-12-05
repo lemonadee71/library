@@ -19,15 +19,21 @@ const cardMixin = Base => class extends Base {
       this[face].setAttribute(attr, val)
   }
 
-  addListener(face, element, type, callback) {
+  addListener(face, element, callbacks) {
     try {
-      if (element)
-        this[`${face}Elements`][element].addEventListener(type, callback)
-      else
-        this[face].addEventListener(type, callback)
+      for (let type in callbacks) {
+        if (element)
+          this[`${face}Elements`][element].addEventListener(type, callbacks[type])
+        else
+          this[face].addEventListener(type, callbacks[type])
+      }
     } catch(error) {
       throw error
     }
+  }
+
+  addElement(face, name, info) {
+    this[`${face}Elements`][name] = this.createElement(info)
   }
 
   createElement(info) {
@@ -125,7 +131,7 @@ const cardMixin = Base => class extends Base {
     })
   }
 
-  render(face, ...classes) {
+  render(face, classes) {
     let mainClass = face !== 'both' ? classes[0] : ''
 
     if (face === 'front' || face === 'both') {
