@@ -197,7 +197,7 @@ const createBookCard = (data) => {
     book = new bookCard(data)
 
   const _convertToStars = rating => {
-    if (rating || rating === "") {
+    if (!rating || rating === "") {
       return null;
     }
   
@@ -218,9 +218,6 @@ const createBookCard = (data) => {
       type: 'span',
       text: '\u00d7',
       class: 'close',
-      attr: {
-        id: 'remove'
-      }
     },
     cover: {
       type: 'img',
@@ -266,7 +263,6 @@ const createBookCard = (data) => {
       type: 'select',
       attr: {
         name: 'status',
-        ['data-id']: `${book.id}`
       },
       children: [
         {
@@ -310,7 +306,55 @@ const createBookCard = (data) => {
     },
     desc: {
       type: 'p',
-      text: `${book.description || 'N/A'}`
+      class: 'description',
+      text: book.description && book.description.length < 200 ? `${book.description}` : '',
+      children: book.description && book.description.length > 200
+        ? [
+          {
+            type: 'span',
+            text: `${book.description.slice(0, 200)}`
+          },
+          {
+            type: 'span',
+            text: '...',
+            attr: {
+              ['data-name']: `${book.id}-dots`
+            }
+          },
+          {
+            type: 'span',
+            text: `${book.description.slice(200, book.description.length)}`,
+            attr: {
+              ['data-name']: `${book.id}-moreTxt`,
+              style: 'display: none;'
+            }
+          },
+          {
+            type: 'button',
+            text: 'Read more',
+            attr: {
+              ['data-name']: `${book.id}-moreBtn`
+            },
+            callback: {
+              click: () => {
+                let dots = document.querySelector(`span[data-name="${book.id}-dots"]`),
+                  moreTxt = document.querySelector(`span[data-name="${book.id}-moreTxt"]`),
+                  btn = document.querySelector(`button[data-name="${book.id}-moreBtn"]`)
+
+                  if (dots.style.display === "none") {
+                    dots.style.display = "inline";
+                    btn.innerHTML = "Read more"; 
+                    moreTxt.style.display = "none";
+                  } else {
+                    dots.style.display = "none";
+                    btn.innerHTML = "Read less"; 
+                    moreTxt.style.display = "inline";
+                  }
+              }
+            }
+          }
+        ]
+        : []
     },
     publisher: {
       type: 'p',
