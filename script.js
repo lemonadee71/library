@@ -149,15 +149,15 @@ const createBookResult = data => {
     },
     author: {
       type: 'p',
-      text: result.author || 'N\A'
+      text: result.author || 'Unknown'
     },
     datePublished: {
       type: 'span',
-      text: result.publishedDate ? result.publishedDate.slice(0,4) : 'N\A'
+      text: result.publishedDate ? result.publishedDate.slice(0,4) : 'Unknown'
     },
     rating: {
       type: 'span',
-      text: result.rating || 'N/A'
+      text: result.rating || 'No rating'
     },
     pages: {
       type: 'span',
@@ -165,7 +165,7 @@ const createBookResult = data => {
     },
     publisher: {
       type: 'p',
-      text: result.publisher || 'N/A'
+      text: result.publisher || 'Unknown'
     },
     button: {
       type: 'button',
@@ -186,7 +186,7 @@ const createBookResult = data => {
   // result.addListener('front', 'button', 'click', Library.addToDOM)
   result.initialize.call(result, 'front', _front)
   result.back = ''
-  result.render('front', 'tooltip')
+  result.render('front', ['tooltip'])
 
   return result;
 }
@@ -220,11 +220,6 @@ const createBookCard = (data) => {
       class: 'close',
       attr: {
         id: 'remove'
-      },
-      callback: {
-        click: () => {
-          book.card.parentElement.removeChild(book.card)
-        }
       }
     },
     cover: {
@@ -253,11 +248,11 @@ const createBookCard = (data) => {
     },
     author: {
       type: 'p',
-      text: `${book.author || 'N/A'}`
+      text: `${book.author || 'Unknown'}`
     },
     yearPublished: {
       type: 'span',
-      text: `${book.publishedDate || 'N/A'}`
+      text: `${book.publishedDate || 'Unknown'}`
     },
     rating: {
       type: 'span',
@@ -319,7 +314,7 @@ const createBookCard = (data) => {
     },
     publisher: {
       type: 'p',
-      text: `${book.publisher || 'N/A'}`
+      text: `${book.publisher || 'Unknown'}`
     },
     dateRead: {
       type: 'input',
@@ -431,7 +426,7 @@ const App = (doc => {
     return {
       id: item.id,
       title: item.volumeInfo.title, 
-      author: item.volumeInfo.authors.join(', '),
+      author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : 'Unknown',
       description: item.volumeInfo.description,
       rating: item.volumeInfo.averageRating,
       pageCount: item.volumeInfo.pageCount,
@@ -456,13 +451,16 @@ const App = (doc => {
 
   const _renderBook = (data) => {
     let book = createBookCard(data)
-    book.addListener('front', 'remove', {
-      click: () => {
-        storage.remove(item => book.id === item.id)
 
-        library.removeItem(item => {
-          return item.id === book.id
-        })
+    book.addListener('front', 'remove', {
+      click: (e) => {
+        e.stopPropagation()
+
+        if (confirm('Are you sure you want to remove this book from your library?')) {
+          book.card.parentElement.removeChild(book.card)
+          storage.remove(item => item.id === book.id)
+          library.removeItem(item => item.id === book.id)
+        }              
       }
     })
     book.addListener('back', 'status', {
@@ -483,11 +481,25 @@ const App = (doc => {
 
     results.forEach(item => {
       let result = createBookResult(_getBookData(item))
+
       result.addListener('front', 'button', {
         click: () => {
           let book = _renderBook(_getBookData(item))
-          library.addToDOM(book)
-          storage.store(book.getData())
+          let alreadyAdded = false
+
+          library.items.forEach(item => {
+            if (item.id === book.id)
+              alreadyAdded = true
+          })
+
+          if (alreadyAdded) {
+            alert('This book is already in your library')
+          } else {
+            library.addToDOM(book)
+            storage.store(book.getData())
+            searchResults.removeChild(result.card)
+          }
+          
         }
       })
 
@@ -516,12 +528,8 @@ const App = (doc => {
 
   const _checkStorage = () => {
     let data = storage.getItems()
-    if (data) {
-      data.forEach(item => {
-        let book = _renderBook(item)
-        library.addToDOM(book)
-      })
-    }
+    if (data)
+      data.forEach(info => library.addToDOM(_renderBook(info)))
   }
 
   const initialize = () => {
