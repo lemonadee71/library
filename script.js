@@ -211,6 +211,14 @@ const createBookCard = (data) => {
     return stars;
   };
 
+  // Check if there are multiple authors
+  // If more than 2, only get the first then add et al.
+  let authors = book.author.split(', ')
+  if (authors.length > 2) {
+    authors = `${authors.slice(0,1).join(', ')} et al.`
+  } else {
+    authors = book.author
+  }
   
   let _front = {
     remove: {
@@ -228,12 +236,22 @@ const createBookCard = (data) => {
     title: {
       type: 'p',
       class: 'title',
-      text: `${book.title}`
+      text: `${book.title}`,
+      attr: {
+        // Font size changes when title's characters exceeds 32
+        // This is so that it doesn't go beyond the card
+        style: `font-size: ${book.title.length > 32 ? `${(32 / book.title.length) * 18}px`: '18px'};`
+      }
     },
     author: {
       type: 'p',
       class: 'subtitle',
-      text: `${book.author}`
+      text: authors,
+      attr: {
+        // Font size changes when authors' characters exceeds 32
+        // This is so that it doesn't go beyond the card
+        style: `font-size: ${authors.length > 20 ? `${(20 / authors.length) * 14}px`: '14px'};`
+      }
     }
   }
   
@@ -248,7 +266,7 @@ const createBookCard = (data) => {
     },
     yearPublished: {
       type: 'span',
-      text: `${book.publishedDate || 'Unknown'}`
+      text: `${book.publishedDate.slice(0,4) || 'Unknown'}`
     },
     rating: {
       type: 'span',
@@ -306,6 +324,7 @@ const createBookCard = (data) => {
     desc: {
       type: 'p',
       class: 'description',
+      // If description is greater than 200 characters, add a "Read more" btn
       text: book.description && book.description.length < 200 ? `${book.description}` : '',
       children: book.description && book.description.length > 200
         ? [
@@ -329,25 +348,26 @@ const createBookCard = (data) => {
             }
           },
           {
-            type: 'button',
-            text: 'Read more',
+            type: 'span',
+            text: ' Read more',
             attr: {
-              ['data-name']: `${book.id}-moreBtn`
+              ['data-name']: `${book.id}-moreBtn`,
+              style: 'font-weight: bold; cursor: pointer;'
             },
             callback: {
               click: () => {
                 let dots = document.querySelector(`span[data-name="${book.id}-dots"]`),
                   moreTxt = document.querySelector(`span[data-name="${book.id}-moreTxt"]`),
-                  btn = document.querySelector(`button[data-name="${book.id}-moreBtn"]`)
+                  btn = document.querySelector(`span[data-name="${book.id}-moreBtn"]`)
 
-                  if (dots.style.display === "none") {
-                    dots.style.display = "inline";
-                    btn.innerHTML = "Read more"; 
-                    moreTxt.style.display = "none";
+                  if (dots.style.display === 'none') {
+                    dots.style.display = 'inline';
+                    btn.innerHTML = ' Read more'; 
+                    moreTxt.style.display = 'none';
                   } else {
-                    dots.style.display = "none";
-                    btn.innerHTML = "Read less"; 
-                    moreTxt.style.display = "inline";
+                    dots.style.display = 'none';
+                    btn.innerHTML = ' Read less'; 
+                    moreTxt.style.display = 'inline';
                   }
               }
             }
@@ -404,9 +424,7 @@ const storage = ((str) => {
 
   const getItems = () => JSON.parse(data.getItem(key))
 
-  const reset = () => {
-    data.clear()
-  }
+  const reset = () => data.clear()
 
   const update = (newInfo, condition) => {
     let storedData = getItems()
@@ -463,7 +481,6 @@ const App = (doc => {
     filter = doc.getElementById('filter')
 
   const library = new Library(doc.getElementById('library'))
-  const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
 
   const initialize = () => {
     searchBtn.addEventListener('click', _showSearchModal)
@@ -483,8 +500,10 @@ const App = (doc => {
   }
 
   const _hideSearchModal = (e) => {
-    if (e.target.id === 'searchModal')
+    if (e.target.id === 'searchModal') {
       searchModal.style.display = 'none'
+      _clearSearchResults()
+    }
   }
 
   async function _searchBook(e) {
@@ -497,7 +516,9 @@ const App = (doc => {
     _showSearchResults(results)
   }
 
-  async function _getSearchResults(params) {  
+  async function _getSearchResults(params) {
+    const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
+    
     return fetch(`${GOOGLE_BOOKS}q=${params.title}+inauthor:${params.author}`)
       .then(response => response.json())
       .then(results => results.items)

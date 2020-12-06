@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+
 .container {
   width: 90%;
   margin: auto;
@@ -18,17 +20,38 @@ header {
   background-color: salmon;
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
 }
 
+/* Card */
 .front {
+  border-radius: 10px;
+  font-family: 'Open Sans', sans-serif;
   background-color: antiquewhite;
   height: 250px;
+  width: 150px;
+  padding: 8px;
   text-align: center;
   border: 1px solid black;
 }
 
 .front img {
-  width: 80%;
+  width: 125px;
+  height: 180px;
+}
+
+.front p {
+  padding: 0;
+  margin: 0;
+}
+
+.front .title {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.front .subtitle {
+  font-size: 14px;
 }
 
 /* 
