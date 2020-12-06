@@ -165,13 +165,12 @@ const createBookResult = data => {
     },
     publisher: {
       type: 'p',
-      text: this.publisher || 'N/A'
+      text: result.publisher || 'N/A'
     },
     button: {
       type: 'button',
       text: 'Add Book'
     },
-    /*
     tooltip: {
       type: 'div',
       class: 'tooltip-content',
@@ -182,7 +181,6 @@ const createBookResult = data => {
         }
       ]
     }
-    */
   }
 
   // result.addListener('front', 'button', 'click', Library.addToDOM)
@@ -280,14 +278,16 @@ const createBookCard = (data) => {
           type: 'option',
           text: 'Read',
           attr: {
-            value: 'read'
+            value: 'read',
+            selected: book.status === 'read' ? 'selected' : ''
           }
         },
         {
           type: 'option',
           text: 'Reading',
           attr: {
-            value: 'reading'
+            value: 'reading',
+            selected: book.status === 'reading' ? 'selected' : ''
           }
         },
         {
@@ -295,6 +295,7 @@ const createBookCard = (data) => {
           text: 'To Be Read',
           attr: {
             value: 'to-read',
+            selected: book.status === 'to-read' ? 'selected' : ''
           }
         }
       ],
@@ -324,7 +325,8 @@ const createBookCard = (data) => {
       type: 'input',
       attr: {
         type: 'date',
-        id: 'date-read'
+        id: 'date-read',
+        value: book.dateRead || ''
       },
       callback: {
         change: (e) => {
@@ -338,6 +340,7 @@ const createBookCard = (data) => {
       attr: {
         type: 'date',
         id: 'date-finished',
+        value: book.dateFinished || ''
       },
       callback: {
         change: (e) => {
@@ -348,25 +351,70 @@ const createBookCard = (data) => {
     }
   }
   
+  // Render elements
   book.initialize.call(book, 'front', _front)
   book.initialize.call(book, 'back', _back)
   book.render('both', ['front', 'modal'])
 
-  // Set attributes
-  book.setAttribute('back', 'dateRead', 'value', book.dateRead)
-  book.setAttribute('back', 'dateFinished', 'value', book.dateFinished)
-  
-  let options = Array.from(book.backElements.status.children)
-  if (options) {
-    options.forEach(opt => {
-      if (opt.value === book.status) {
-        opt.setAttribute('selected', 'selected')
-      }
-    })
-  }
-
   return book;
 }
+
+/* Storage object */
+const storage = ((str) => {
+  let data = window.localStorage
+  let key = str
+
+  const getItems = () => JSON.parse(data.getItem(key))
+
+  const reset = () => {
+    data.clear()
+  }
+
+  const update = (newInfo, condition) => {
+    let storedData = getItems()
+    let index
+
+    storedData.forEach((item, i) => {
+      if (condition(item))
+        index = i
+    })
+
+    storedData[index] = newInfo
+    data.setItem(key, JSON.stringify(storedData))
+  }
+
+  const remove = (condition) => {
+    let storedData = getItems()
+    let index
+
+    storedData.forEach((item, i) => {
+      if (condition(item))
+        index = i
+    })
+
+    storedData.splice(index, 1)
+    data.setItem(key, JSON.stringify(storedData))
+  }
+
+  const store = (info) => {
+    let storedData = getItems()
+
+    if (storedData) 
+      storedData.push(info)
+
+    data.setItem(key, JSON.stringify(storedData || [info]))
+  }
+
+  return {
+    data,
+    getItems,
+    reset,
+    store,
+    update,
+    remove,
+  }
+})('data')
+
 
 /* The whole website application */
 const App = (doc => {
@@ -377,8 +425,6 @@ const App = (doc => {
     filter = doc.getElementById('filter')
 
   const library = new Library(doc.getElementById('library'))
-  const storage = window.localStorage
-
   const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
 
   const _getBookData = (item) => { 
@@ -409,40 +455,27 @@ const App = (doc => {
   }
 
   const _renderBook = (data) => {
-    let book = createBookCard(_getBookData(data))
+    let book = createBookCard(data)
     book.addListener('front', 'remove', {
       click: () => {
-        let storedData = JSON.parse(storage.getItem('data')),
-          index = 0
+        storage.remove(item => book.id === item.id)
 
-        storedData.forEach((item, i) => {
-          if (item.id === book.id) {
-            index = i
-          }
-        })
-        storedData.splice(index, 1)
-        storage.setItem('data', JSON.stringify(storedData))
-
-        book.card.parentElement.removeChild(book.card)
         library.removeItem(item => {
           return item.id === book.id
         })
       }
     })
+    book.addListener('back', 'status', {
+      change: () => storage.update(book.getData(), item => item.id === book.id)
+    })
+    book.addListener('back', 'dateRead', {
+      change: () => storage.update(book.getData(), item => item.id === book.id)
+    })
+    book.addListener('back', 'dateFinished', {
+      change: () => storage.update(book.getData(), item => item.id === book.id)
+    })
 
     return book
-  }
-
-  const _storeData = (data) => {
-    let storedData = storage.getItem('data'),
-      newData
-
-    if (storedData) {
-      newData = JSON.parse(storedData)
-      newData.push(...data)
-    } 
-
-    storage.setItem('data', JSON.stringify(newData || data))
   }
 
   const _renderResults = (results) => {
@@ -452,9 +485,9 @@ const App = (doc => {
       let result = createBookResult(_getBookData(item))
       result.addListener('front', 'button', {
         click: () => {
-          let book = _renderBook(item)
+          let book = _renderBook(_getBookData(item))
           library.addToDOM(book)
-          _storeData([book.getData()])
+          storage.store(book.getData())
         }
       })
 
@@ -482,12 +515,10 @@ const App = (doc => {
   }
 
   const _checkStorage = () => {
-    console.log(JSON.parse(storage.getItem('data')))
-    let data = storage.getItem('data')
+    let data = storage.getItems()
     if (data) {
-      data = JSON.parse(data)
       data.forEach(item => {
-        let book = createBookCard(item)
+        let book = _renderBook(item)
         library.addToDOM(book)
       })
     }

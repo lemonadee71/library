@@ -60,7 +60,8 @@ const cardMixin = Base => class extends Base {
       if (info.attr) {
         let attributes = info.attr
         for (let attr in attributes) {
-          element.setAttribute(attr, attributes[attr])
+          if (attributes[attr])
+            element.setAttribute(attr, attributes[attr])
         }
       }
 
