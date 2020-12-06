@@ -17,15 +17,12 @@ header {
 #library {
   background-color: salmon;
   display: flex;
-  /*
-  grid-template-columns: repeat(6, 1fr);
-  column-gap: 15px;
-  */
+  flex-wrap: wrap;
 }
 
 .front {
   background-color: antiquewhite;
-  min-height: 20vw;
+  height: 250px;
   text-align: center;
   border: 1px solid black;
 }
@@ -109,7 +106,7 @@ Taken from https://www.w3schools.com/css/css_tooltip.asp
 /* 
 Goodreads reviews widget
 Taken from Goodreads 
-*/
+
 #goodreads-widget {
   font-family: georgia, serif;
   padding: 18px 0;
@@ -140,3 +137,5 @@ Taken from Goodreads
   text-decoration: none;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+
+*/

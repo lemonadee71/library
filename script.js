@@ -183,7 +183,6 @@ const createBookResult = data => {
     }
   }
 
-  // result.addListener('front', 'button', 'click', Library.addToDOM)
   result.initialize.call(result, 'front', _front)
   result.back = ''
   result.render('front', ['tooltip'])
@@ -457,7 +456,7 @@ const storage = ((str) => {
 
 /* The whole website application */
 const App = (doc => {
-  let searchBtn = doc.getElementById('searchBook'),
+  let searchBtn = doc.getElementById('search'),
     searchModal = doc.getElementById('searchModal'),
     searchForm = doc.getElementById('searchForm'),
     searchResults = doc.getElementById('searchResults'),
@@ -466,20 +465,36 @@ const App = (doc => {
   const library = new Library(doc.getElementById('library'))
   const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes?';
 
-  const _getBookData = (item) => { 
-    return {
-      id: item.id,
-      title: item.volumeInfo.title, 
-      author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : 'Unknown',
-      description: item.volumeInfo.description,
-      rating: item.volumeInfo.averageRating,
-      pageCount: item.volumeInfo.pageCount,
-      publishedDate: item.volumeInfo.publishedDate,
-      publisher: item.volumeInfo.publisher,
-      thumbnail: item.volumeInfo.imageLinks ? item.volumeInfo.imageLinks.thumbnail : '',
-      rating: item.volumeInfo.averageRating,
-      categories: item.volumeInfo.categories
-    }
+  const initialize = () => {
+    searchBtn.addEventListener('click', _showSearchModal)
+    searchModal.addEventListener('click', _hideSearchModal)
+    searchForm.addEventListener('submit', _searchBook)
+    _checkStorage()
+  }
+
+  const _checkStorage = () => {
+    let data = storage.getItems()
+    if (data)
+      data.forEach(info => library.addToDOM(_renderBook(info)))
+  }
+
+  const _showSearchModal = () => {
+    searchModal.style.display = 'block' 
+  }
+
+  const _hideSearchModal = (e) => {
+    if (e.target.id === 'searchModal')
+      searchModal.style.display = 'none'
+  }
+
+  async function _searchBook(e) {
+    e.preventDefault()
+    
+    let title = doc.getElementById('search-title').value,
+      author = doc.getElementById('search-author').value
+
+    let results = await _getSearchResults({title, author})
+    _showSearchResults(results)
   }
 
   async function _getSearchResults(params) {  
@@ -491,6 +506,36 @@ const App = (doc => {
   const _clearSearchResults = () => {
     while (searchResults.firstChild)
       searchResults.removeChild(searchResults.lastChild)
+  }
+
+  const _showSearchResults = (results) => {
+    _clearSearchResults()
+
+    results.forEach(item => {
+      let result = createBookResult(_getBookData(item))
+
+      result.addListener('front', 'button', {
+        click: () => {
+          let book = _renderBook(_getBookData(item))
+          let alreadyAdded = false
+
+          library.items.forEach(item => {
+            if (item.id === book.id)
+              alreadyAdded = true
+          })
+
+          if (alreadyAdded) {
+            alert('This book is already in your library')
+          } else {
+            library.addToDOM(book)
+            storage.store(book.getData())
+            searchResults.removeChild(result.card)
+          }
+        }
+      })
+
+      searchResults.appendChild(result.card)
+    })   
   }
 
   const _renderBook = (data) => {
@@ -519,69 +564,22 @@ const App = (doc => {
 
     return book
   }
-
-  const _renderResults = (results) => {
-    _clearSearchResults()
-
-    results.forEach(item => {
-      let result = createBookResult(_getBookData(item))
-
-      result.addListener('front', 'button', {
-        click: () => {
-          let book = _renderBook(_getBookData(item))
-          let alreadyAdded = false
-
-          library.items.forEach(item => {
-            if (item.id === book.id)
-              alreadyAdded = true
-          })
-
-          if (alreadyAdded) {
-            alert('This book is already in your library')
-          } else {
-            library.addToDOM(book)
-            storage.store(book.getData())
-            searchResults.removeChild(result.card)
-          }
-          
-        }
-      })
-
-      searchResults.appendChild(result.card)
-    })   
-  }
-
-  async function _searchBook(e) {
-    e.preventDefault()
-    
-    let title = doc.getElementById('search-title').value,
-      author = doc.getElementById('search-author').value
-
-    let results = await _getSearchResults({title, author})
-    _renderResults(results)
-  }
-
-  const _showSearchModal = () => {
-    searchModal.style.display = 'block' 
-  }
-
-  const _hideSearchModal = (e) => {
-    if (e.target.id === 'searchModal')
-      searchModal.style.display = 'none'
-  }
-
-  const _checkStorage = () => {
-    let data = storage.getItems()
-    if (data)
-      data.forEach(info => library.addToDOM(_renderBook(info)))
-  }
-
-  const initialize = () => {
-    searchBtn.addEventListener('click', _showSearchModal)
-    searchModal.addEventListener('click', _hideSearchModal)
-    searchForm.addEventListener('submit', _searchBook)
-    _checkStorage()
-  }
+  
+  const _getBookData = (item) => { 
+    return {
+      id: item.id,
+      title: item.volumeInfo.title, 
+      author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : 'Unknown',
+      description: item.volumeInfo.description,
+      rating: item.volumeInfo.averageRating,
+      pageCount: item.volumeInfo.pageCount,
+      publishedDate: item.volumeInfo.publishedDate,
+      publisher: item.volumeInfo.publisher,
+      thumbnail: item.volumeInfo.imageLinks ? item.volumeInfo.imageLinks.thumbnail : '',
+      rating: item.volumeInfo.averageRating,
+      categories: item.volumeInfo.categories
+    }
+  }  
 
   return {
     initialize,
