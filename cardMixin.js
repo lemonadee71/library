@@ -65,6 +65,25 @@ const cardMixin = Base => class extends Base {
         }
       }
 
+      // Add style
+      if (info.style) {
+        for (let st in info.style) {
+          st = !st.includes('-') ? st : st.split('-').reduce((prev, current, i) => {
+            if (i > 0)
+              return prev + current.charAt(0).toUpperCase() + current.slice(1)
+            return current
+          }, '')
+          element.style[st] = info.style[st]
+        }
+      }
+
+      // Add properties
+      if (info.prop) {
+        for (let pr in info.prop) {
+          element[pr] = info.prop[pr]
+        }
+      }
+
       // Add listeners
       if (info.callback) {
         let callbacks = info.callback

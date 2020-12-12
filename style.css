@@ -54,6 +54,11 @@ header {
   font-size: 14px;
 }
 
+/* Card back */
+.progress {
+  height: 15px;
+}
+
 /* 
 Modal
 Taken from: https://www.w3schools.com/howto/howto_css_modals.asp

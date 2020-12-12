@@ -12,6 +12,7 @@ class Book {
     this.rating = data.rating
     this.isbn = data.isbn
     this.status = data.status || 'to-read'
+    this.progress = data.progress || 0
     this.dateRead = data.dateRead || ''
     this.dateFinished = data.dateFinished || ''
     this.comment = data.comment || ''
@@ -32,6 +33,7 @@ class Book {
       rating: this.rating,
       isbn: this.isbn,
       status: this.status,
+      progress: this.progress,
       dateRead: this.dateRead,
       dateFinished: this.dateFinished,
       comment: this.comment,
@@ -195,22 +197,6 @@ const createBookCard = (data) => {
   let bookCard = cardMixin(Book),
     book = new bookCard(data)
 
-  const _convertToStars = rating => {
-    if (!rating || rating === "") {
-      return null;
-    }
-  
-    let decimal = +rating - Math.floor(+rating);
-    let stars = "\u2605".repeat(Math.floor(+rating));
-  
-    if (decimal <= 0.25 && decimal > 0) stars = stars + "\u00BC";
-    else if (decimal <= 0.5 && decimal > 0) stars = stars + "\u00BD";
-    else if (decimal <= 0.75 && decimal > 0) stars = stars + "\u00BE";
-    else if (decimal < 1 && decimal > 0) stars = stars + "\u2605";
-  
-    return stars;
-  };
-
   // Check if there are multiple authors
   // If more than 2, only get the first then add et al.
   let authors = book.author.split(', ')
@@ -269,57 +255,165 @@ const createBookCard = (data) => {
       text: `${book.publishedDate.slice(0,4) || 'Unknown'}`
     },
     rating: {
-      type: 'span',
-      text: `${_convertToStars(book.rating) || 'No rating'}`
-    },
-    pageCount: {
-      type: 'span',
-      text: `${book.pageCount || 'N/A'}`
-    },
-    status: {
-      type: 'select',
-      attr: {
-        name: 'status',
-      },
+      type: 'div',
       children: [
         {
-          type: 'option',
-          text: 'Read',
+          type: 'p',
+          text: 'Rating'
+        },
+        {
+          type: 'div',
+          children: (() => {
+            let arr = []
+            for (let i = 0; i < 5; i++) {
+              arr.push({
+                type: 'span',
+                text: '\u2605',
+                attr: {
+                  'data-i': `${i}`
+                },
+                style: {
+                  color: i < book.rating ? 'orange' : 'gray',
+                  cursor: 'pointer',
+                },
+                callback: {
+                  click: (e) => {
+                    let pos = e.target.getAttribute('data-i'),
+                      children = Array.from(e.target.parentElement.children)
+                    
+                    children.forEach((child, i) => {
+                      if (i <= pos)
+                        child.style.color = 'orange'
+                      else
+                        child.style.color = 'gray'
+                    })
+
+                    book.rating = +pos + 1
+                  }
+                }
+              })
+            }
+            return arr;
+          })()
+        }
+      ]
+    },
+    progress: {
+      type: 'div',
+      style: {
+        position: 'relative'
+      },
+      children: [ 
+        {
+          type: 'p',
+          text: 'Progress'
+        },
+        {
+          type: 'input',
+          class: 'progress',
           attr: {
-            value: 'read',
-            selected: book.status === 'read' ? 'selected' : ''
+            type: 'text',
+            placeholder: book.pageCount ? `Out of ${book.pageCount} pages` : '',
+          },
+          prop: {
+            value: book.progress ? `${book.progress}%` : ''
+          },
+          style: {
+            width: '115px',
+            display: 'none'
+          },
+          callback: {
+            focusout: (e) => {
+              let inp = e.target,
+                value = inp.value
+
+              if (value.includes('%'))
+                book.progress = value.replace('%', '')
+              else
+                book.progress = Math.round(+value / +book.pageCount * 100)
+
+              inp.value = `${book.progress}%`
+              inp.style.display = 'none'
+              inp.nextSibling.style.display = 'inline-block'
+              inp.nextSibling.firstChild.style.width = `${book.progress}%`
+            }
           }
         },
         {
-          type: 'option',
-          text: 'Reading',
-          attr: {
-            value: 'reading',
-            selected: book.status === 'reading' ? 'selected' : ''
+          type: 'div',
+          style: {
+            border: '0.8px solid black',
+            backgroundColor: 'grey',
+            display: 'inline-block',
+            width: '115px'
+          },
+          children: [
+            {
+              type: 'div',
+              class: 'progress',
+              style: {
+                background: 'green',
+                width: book.progress ? `${book.progress}%` : '0'
+              },
+            }
+          ],
+          callback: {
+            dblclick: (e) => {
+              let t = e.target
+              if (t.className.includes('progress')) {
+                t.parentElement.style.display = 'none'
+                t.parentElement.previousSibling.style.display = 'inline'
+              } else {
+                t.style.display = 'none'
+                t.previousSibling.style.display = 'inline'
+              }
+            }
           }
+        }
+      ]
+    },
+    status: {
+      type: 'div',
+      children: [
+        {
+          type: 'p',
+          text: 'Status'
         },
         {
-          type: 'option',
-          text: 'To Be Read',
+          type: 'select',
           attr: {
-            value: 'to-read',
-            selected: book.status === 'to-read' ? 'selected' : ''
+            name: 'status',
+          },
+          children: (() => {
+            let arr = []
+            let status = ['read', 'reading', 'to read', 'dropped']
+            status.forEach(stat => {
+              arr.push({
+                type: 'option',
+                text: stat.split(' ').map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' '),
+                attr: {
+                  value: stat,
+                  selected: book.status === stat ? 'selected' : ''
+                }
+              })
+            })
+            return arr;
+          })(),
+          callback: {
+            change: (e) => {
+              let options = Array.from(e.target.children)
+              options.forEach(opt => {
+                if (opt.value === e.target.value) {
+                  opt.setAttribute('selected', 'selected')
+                  book.status = opt.value
+                } else {
+                  opt.removeAttribute('selected')
+                }    
+              })
+            }
           }
         }
-      ],
-      callback: {
-        change: (e) => {
-          let options = Array.from(e.target.children)
-          options.forEach(opt => {
-            if (opt.value === e.target.value) {
-              opt.setAttribute('selected', 'selected')
-              book.status = opt.value
-            } else {
-              opt.removeAttribute('selected')
-            }    
-          })
-        }
-      }
+      ]
     },
     desc: {
       type: 'p',
@@ -377,7 +471,30 @@ const createBookCard = (data) => {
     },
     publisher: {
       type: 'p',
-      text: `${book.publisher || 'Unknown'}`
+      text: `Published by ${book.publisher || 'Unknown'}`
+    },
+    comment: {
+      type: 'div',
+      children: [
+        {
+          type: 'p',
+          text: 'Review'
+        },
+        {
+          type: 'textarea',
+          prop: {
+            textContent: book.comment || ''
+          },
+          callback: {
+            keydown: (e) => {
+              book.comment = e.target.value
+            },
+            focusout: (e) => {
+              book.comment = e.target.value
+            }
+          }
+        }
+      ]
     },
     dateRead: {
       type: 'input',
@@ -581,6 +698,16 @@ const App = (doc => {
     })
     book.addListener('back', 'dateFinished', {
       change: () => storage.update(book.getData(), item => item.id === book.id)
+    })
+    book.addListener('back', 'rating', {
+      click: () => storage.update(book.getData(), item => item.id === book.id)
+    })
+    book.addListener('back', 'progress', {
+      focusout: () => storage.update(book.getData(), item => item.id === book.id)
+    })
+    book.addListener('back', 'comment', {
+      keydown: () => storage.update(book.getData(), item => item.id === book.id),
+      focusout: () => storage.update(book.getData(), item => item.id === book.id)
     })
 
     return book
