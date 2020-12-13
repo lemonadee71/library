@@ -22,23 +22,7 @@ class Book {
 
   getData() {
     return {
-      id: this.id,
-      title:this.title,
-      author: this.author,
-      description: this.description,
-      pageCount: this.pageCount,
-      publishedDate: this.publishedDate,
-      publisher: this.publisher,
-      thumbnail: this.thumbnail,
-      rating: this.rating,
-      isbn: this.isbn,
-      status: this.status,
-      progress: this.progress,
-      dateRead: this.dateRead,
-      dateFinished: this.dateFinished,
-      comment: this.comment,
-      categories: this.categories,
-      tags: this.tags, 
+      ...this
     }
   }
 
@@ -111,10 +95,6 @@ class Library extends List {
   removeFromDOM(book, condition) {
     super.removeItem(condition)
     this.element.removeChild(book.card)
-  }
-
-  sort() {
-    
   }
 
   filter(str) {
@@ -759,7 +739,8 @@ const App = (doc => {
     searchModal = doc.getElementById('searchModal'),
     searchForm = doc.getElementById('searchForm'),
     searchResults = doc.getElementById('searchResults'),
-    filter = doc.getElementById('filter')
+    filter = doc.getElementById('filter'),
+    sorter = doc.getElementById('sorter')
 
   const library = new Library(doc.getElementById('library'))
 
@@ -768,6 +749,7 @@ const App = (doc => {
     searchModal.addEventListener('click', _hideSearchModal)
     searchForm.addEventListener('submit', _searchBook)
     filter.addEventListener('keyup', _filterLibrary)
+    //sorter.addEventListener('change', _sortLibrary)
     _checkStorage()
   }
 
@@ -781,6 +763,12 @@ const App = (doc => {
   const _filterLibrary = (e) => {
     library.filter(e.target.value)
   }
+
+  /*
+  const _sortLibrary = (e) => {
+    library.sort(e.target.value)
+  }
+  */
 
   const _showSearchModal = () => {
     searchModal.style.display = 'block' 
