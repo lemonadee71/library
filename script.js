@@ -113,21 +113,47 @@ class Library extends List {
     this.element.removeChild(book.card)
   }
 
-  filter(flag, str) {
-    this.items.forEach(book => {
-      switch (flag) {
-        case ':':
-          if (book.author.indexOf(str) !== -1)
-            book.front.style.display = 'none'
-          else
-            book.front.style.display = 'block'
+  sort() {
+    
+  }
+
+  filter(str) {
+    let flag = str.charAt(0)
+    let txt = str.toLowerCase()
+
+    if (flag === '#' || flag === '@' || flag === '+') {
+      txt = txt.slice(1)
+    } else {
+      flag = ''
+    }
+
+    let _toggleDisplay = (book, condition) => {
+      if (condition) {
+        book.show()
+      } else {
+        book.hide()
+      }
+    }
+    
+    this.items.forEach((book) => {  
+      switch(flag) {
+        case '@': {
+          _toggleDisplay(book, book.author.toLowerCase().includes(txt))
           break;
-        default:
-          if (book.title.indexOf(str) !== -1)
-            book.front.style.display = 'none'
-          else
-            book.front.style.display = 'block'
+        }
+        case '#': {
+          _toggleDisplay(book, (book.status === txt))
           break;
+        }
+        case '+': {
+          let tags = [...book.tags, ...book.categories].map(el => el.toLowerCase())
+          _toggleDisplay(book, tags.includes(txt))
+          break;
+        }
+        default: {
+          _toggleDisplay(book, book.title.toLowerCase().includes(txt))
+          break;
+        }
       }
     })
   }
@@ -617,7 +643,6 @@ const createBookCard = (data) => {
                 } else {
                   alert('Tag already added')
                 }
-                
               }
             }
           }
@@ -626,7 +651,9 @@ const createBookCard = (data) => {
           type: 'div',
           children: (() => {
             let arr = []
-            book.tags.forEach(tag => {
+            let tags = [...book.categories, ...book.tags]
+
+            tags.forEach(tag => {
               arr.push({
                 type: 'span',
                 class: 'tag',
@@ -649,7 +676,6 @@ const createBookCard = (data) => {
                     }
                   }
                 ]
-
               })
             })
 
@@ -741,6 +767,7 @@ const App = (doc => {
     searchBtn.addEventListener('click', _showSearchModal)
     searchModal.addEventListener('click', _hideSearchModal)
     searchForm.addEventListener('submit', _searchBook)
+    filter.addEventListener('keyup', _filterLibrary)
     _checkStorage()
   }
 
@@ -749,6 +776,10 @@ const App = (doc => {
     if (data) {
       data.forEach(info => library.addToDOM(_renderBook(info)))
     }
+  }
+
+  const _filterLibrary = (e) => {
+    library.filter(e.target.value)
   }
 
   const _showSearchModal = () => {
@@ -844,7 +875,7 @@ const App = (doc => {
     })
 
 
-    return book
+    return book;
   }
   
   const _getBookData = (item) => { 
