@@ -47,10 +47,9 @@ class Book {
   }
 
   removeTag(tag) {
-    let index = this.tags.findIndex(tag)
-    if (index !== -1) {
-      this.tags.splice(index, 1)
-    }     
+    let pattern = new RegExp(`${tag}`, 'g')
+    this.tags = this.tags.join('-').replace(pattern, '').split('-').filter(el => el)
+    console.log(this.tags)
   }
 
   removeAllTags() {
@@ -220,6 +219,35 @@ const createBookCard = (data) => {
       }    
     })    
   }
+
+  const _updateDate = (type, value = '') => {
+    let target = document.querySelector(`input[data-id="${book.id}-date${type}"]`)
+
+    let date = new Date()
+    let formattedDate = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+
+    target.removeAttribute('value')
+    target.setAttribute('value', value || formattedDate)
+    book[`date${type}`] = value || formattedDate
+  }
+  
+  const _createTag = (text, cls = 'tag', type = 'span') => {
+    let tag = document.createElement(type)
+    let txt = document.createTextNode(text)    
+    let removeBtn = document.createElement('span')
+    
+    removeBtn.innerHTML = '&times;'
+    removeBtn.style.cursor = 'pointer'
+    removeBtn.addEventListener('click', () => {
+      book.removeTag(text)
+      tag.parentElement.removeChild(tag)
+    })
+    
+    tag.append(txt, removeBtn)
+    tag.classList.add(cls)
+
+    return tag;
+  }
   
   let _front = {
     remove: {
@@ -264,10 +292,6 @@ const createBookCard = (data) => {
     author: {
       type: 'p',
       text: `${book.author || 'Unknown'}`
-    },
-    yearPublished: {
-      type: 'span',
-      text: `Year published: ${book.publishedDate.slice(0,4) || 'Unknown'}`
     },
     rating: {
       type: 'div',
@@ -358,6 +382,7 @@ const createBookCard = (data) => {
                 if (book.status === 'to read' || book.status === 'dropped') {
                   if (confirm('Set this book\'s status to "reading"')) {
                     _updateStatus({ value: 'reading' })
+                    _updateDate('Read')
                   }
                 } else if (book.status === 'read') {
                   if (confirm('Set this book\'s status to "rereading"?')) {
@@ -366,6 +391,7 @@ const createBookCard = (data) => {
                 }
               } else if (+book.progress === 100) {
                 _updateStatus({ value: 'read' })
+                _updateDate('Finished')
               }
             }
           }
@@ -427,68 +453,84 @@ const createBookCard = (data) => {
             return arr;
           })(),
           callback: {
-            change: (e) => _updateStatus(e.target)
+            change: (e) => {
+              _updateStatus(e.target)
+              if (e.target.value === 'reading') {
+                _updateDate('Read')
+              } else if (e.target.value === 'read') {
+                _updateDate('Finished')
+              }
+            }
           }
         }
       ]
     },
     desc: {
-      type: 'p',
-      class: 'description',
-      // If description is greater than 200 characters, add a "Read more" btn
-      text: book.description && book.description.length < 200 ? `${book.description}` : '',
-      children: book.description && book.description.length > 200
-        ? [
-          {
-            type: 'span',
-            text: `${book.description.slice(0, 200)}`
-          },
-          {
-            type: 'span',
-            text: '...',
-            attr: {
-              ['data-name']: `${book.id}-dots`
-            }
-          },
-          {
-            type: 'span',
-            text: `${book.description.slice(200, book.description.length)}`,
-            attr: {
-              ['data-name']: `${book.id}-moreTxt`,
-              style: 'display: none;'
-            }
-          },
-          {
-            type: 'span',
-            text: ' Read more',
-            attr: {
-              ['data-name']: `${book.id}-moreBtn`,
-              style: 'font-weight: bold; cursor: pointer;'
-            },
-            callback: {
-              click: () => {
-                let dots = document.querySelector(`span[data-name="${book.id}-dots"]`),
-                  moreTxt = document.querySelector(`span[data-name="${book.id}-moreTxt"]`),
-                  btn = document.querySelector(`span[data-name="${book.id}-moreBtn"]`)
-
-                  if (dots.style.display === 'none') {
-                    dots.style.display = 'inline';
-                    btn.innerHTML = ' Read more'; 
-                    moreTxt.style.display = 'none';
-                  } else {
-                    dots.style.display = 'none';
-                    btn.innerHTML = ' Read less'; 
-                    moreTxt.style.display = 'inline';
+      type: 'div',
+      children: [
+        {
+          type: 'p',
+          text: 'Synopsis'
+        },
+        {
+          type: 'p',
+          class: 'description',
+          // If description is greater than 200 characters, add a "Read more" button
+          text: book.description && book.description.length < 200 ? `${book.description}` : '',
+          children: book.description && book.description.length > 200
+            ? [
+              {
+                type: 'span',
+                text: `${book.description.slice(0, 200)}`
+              },
+              {
+                type: 'span',
+                text: '...',
+                attr: {
+                  'data-name': `${book.id}-dots`
+                }
+              },
+              {
+                type: 'span',
+                text: `${book.description.slice(200, book.description.length)}`,
+                attr: {
+                  'data-name': `${book.id}-moreTxt`,
+                  style: 'display: none;'
+                }
+              },
+              {
+                type: 'span',
+                text: ' Read more',
+                attr: {
+                  'data-name': `${book.id}-moreBtn`,
+                  style: 'font-weight: bold; cursor: pointer;'
+                },
+                callback: {
+                  click: () => {
+                    let dots = document.querySelector(`span[data-name="${book.id}-dots"]`),
+                      moreTxt = document.querySelector(`span[data-name="${book.id}-moreTxt"]`),
+                      btn = document.querySelector(`span[data-name="${book.id}-moreBtn"]`)
+    
+                      if (dots.style.display === 'none') {
+                        dots.style.display = 'inline';
+                        btn.innerHTML = ' Read more'; 
+                        moreTxt.style.display = 'none';
+                      } else {
+                        dots.style.display = 'none';
+                        btn.innerHTML = ' Read less'; 
+                        moreTxt.style.display = 'inline';
+                      }
                   }
+                }
               }
-            }
-          }
-        ]
-        : []
-    },
-    publisher: {
-      type: 'p',
-      text: `Published by ${book.publisher || 'Unknown'}`
+            ]
+            : []
+        },
+        {
+          type: 'p',
+          text: `First published ${book.publishedDate.slice(0, 4) || 'N/A'} by ${book.publisher || 'Unknown'}`
+        }
+      ]
     },
     comment: {
       type: 'div',
@@ -525,11 +567,11 @@ const createBookCard = (data) => {
           if (book.status === 'to read' || book.status === 'dropped') {
             if (confirm('Set this book\'s status to "reading"?')) {
               _updateStatus({ value: 'reading' })
+              _updateDate('Read')
             }
           }          
 
-          e.target.setAttribute('value', e.target.value)
-          book.dateRead = e.target.value          
+          _updateDate('Read', e.target.value)         
         }
       }
     },
@@ -545,13 +587,76 @@ const createBookCard = (data) => {
           if (book.status !== 'read' && book.status !== 'rereading') {
             if (confirm('Set this book\'s status to "read"?')) {
               _updateStatus({ value: 'read' })
+              _updateDate('Finished')
             }            
           }
           
-          e.target.setAttribute('value', e.target.value)
-          book.dateFinished = e.target.value
+          _updateDate('Finished', e.target.value)
         }
       }
+    },
+    tags: {
+      type: 'div',
+      children: [
+        {
+          type: 'input',
+          attr: {
+            placeholder: 'Add tag'
+          },
+          callback: {
+            keypress: (e) => {
+              if (e.code === 'Enter') {
+                let text = e.target.value
+
+                if (!book.tags.includes(text)) {
+                  let tag = _createTag(text)
+                  
+                  book.addTag(text)
+                  e.target.nextSibling.appendChild(tag)
+                  e.target.value = ''
+                } else {
+                  alert('Tag already added')
+                }
+                
+              }
+            }
+          }
+        },
+        {
+          type: 'div',
+          children: (() => {
+            let arr = []
+            book.tags.forEach(tag => {
+              arr.push({
+                type: 'span',
+                class: 'tag',
+                text: tag,
+                children: [
+                  {
+                    type: 'span',
+                    style: {
+                      cursor: 'pointer'
+                    },
+                    prop: {
+                      innerHTML: '&times;'
+                    },
+                    callback: {
+                      click: (e) => {
+                        let root = e.target.parentElement.parentElement
+                        root.removeChild(e.target.parentElement)
+                        book.removeTag(tag)
+                      }
+                    }
+                  }
+                ]
+
+              })
+            })
+
+            return arr;
+          })()
+        }
+      ]
     }
   }
   
@@ -728,11 +833,16 @@ const App = (doc => {
     book.addListener('back', '', {
       change: () => storage.update(book.getData(), item => item.id === book.id),
       keydown: () => storage.update(book.getData(), item => item.id === book.id),
+      keypress: () => storage.update(book.getData(), item => item.id === book.id),
       focusout: () => storage.update(book.getData(), item => item.id === book.id)
     })
     book.addListener('back', 'rating', {
       click: () => storage.update(book.getData(), item => item.id === book.id)
     })
+    book.addListener('back', 'tags', {
+      click: () => storage.update(book.getData(), item => item.id === book.id)
+    })
+
 
     return book
   }

@@ -33,10 +33,10 @@ const cardMixin = Base => class extends Base {
   }
 
   addElement(face, name, info) {
-    this[`${face}Elements`][name] = this.createElement(info)
+    this[`${face}Elements`][name] = this.makeElement(info)
   }
 
-  createElement(info) {
+  makeElement(info) {
     try {
       let element
 
@@ -95,7 +95,7 @@ const cardMixin = Base => class extends Base {
       // Add children
       if (info.children) {
         info.children.forEach(child => {
-          element.appendChild(this.createElement(child))
+          element.appendChild(this.makeElement(child))
         })
       }
 
@@ -115,7 +115,7 @@ const cardMixin = Base => class extends Base {
 
   initialize(face, list) {
     for (let el in list) {
-      this[`${face}Elements`][el] = this.createElement(list[el])
+      this[`${face}Elements`][el] = this.makeElement(list[el])
     }    
   }
 
