@@ -68,12 +68,12 @@ const cardMixin = Base => class extends Base {
       // Add style
       if (info.style) {
         for (let st in info.style) {
-          st = !st.includes('-') ? st : st.split('-').reduce((prev, current, i) => {
+          let s = !st.includes('-') ? st : st.split('-').reduce((prev, current, i) => {
             if (i > 0)
               return prev + current.charAt(0).toUpperCase() + current.slice(1)
             return current
           }, '')
-          element.style[st] = info.style[st]
+          element.style[s] = info.style[st]
         }
       }
 

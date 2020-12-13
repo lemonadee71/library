@@ -11,7 +11,7 @@ class Book {
     this.thumbnail = data.thumbnail
     this.rating = data.rating
     this.isbn = data.isbn
-    this.status = data.status || 'to-read'
+    this.status = data.status || 'to read'
     this.progress = data.progress || 0
     this.dateRead = data.dateRead || ''
     this.dateFinished = data.dateFinished || ''
@@ -48,8 +48,9 @@ class Book {
 
   removeTag(tag) {
     let index = this.tags.findIndex(tag)
-    if (index !== -1)
+    if (index !== -1) {
       this.tags.splice(index, 1)
+    }     
   }
 
   removeAllTags() {
@@ -72,8 +73,9 @@ class List {
   removeItem(condition) {
     let index = []
     this.items.forEach((item, i) => {
-      if (condition(item))
+      if (condition(item)) {
         index.push(i - index.length)
+      }
     })
     
     if (index.length) {
@@ -90,8 +92,7 @@ class List {
 
   sortItems(condition) {
     this.items.sort((a, b) => {
-      if (condition(a, b))
-        return -1
+      if (condition(a, b)) return -1
       return 1
     })
   }
@@ -205,6 +206,20 @@ const createBookCard = (data) => {
   } else {
     authors = book.author
   }
+
+  const _updateStatus = (el) => {
+    let status = document.querySelector(`select[data-id="${book.id}-status"]`)
+    let options = [...status.children]
+    
+    options.forEach(opt => {
+      if (opt.value === el.value) {
+        opt.setAttribute('selected', 'selected')
+        book.status = opt.value
+      } else {
+        opt.removeAttribute('selected')
+      }    
+    })    
+  }
   
   let _front = {
     remove: {
@@ -252,7 +267,7 @@ const createBookCard = (data) => {
     },
     yearPublished: {
       type: 'span',
-      text: `${book.publishedDate.slice(0,4) || 'Unknown'}`
+      text: `Year published: ${book.publishedDate.slice(0,4) || 'Unknown'}`
     },
     rating: {
       type: 'div',
@@ -278,14 +293,15 @@ const createBookCard = (data) => {
                 },
                 callback: {
                   click: (e) => {
-                    let pos = e.target.getAttribute('data-i'),
-                      children = Array.from(e.target.parentElement.children)
+                    let pos = e.target.getAttribute('data-i')
+                    let children = [...e.target.parentElement.children]
                     
                     children.forEach((child, i) => {
-                      if (i <= pos)
+                      if (i <= pos) {
                         child.style.color = 'orange'
-                      else
+                      } else {
                         child.style.color = 'gray'
+                      }
                     })
 
                     book.rating = +pos + 1
@@ -324,29 +340,39 @@ const createBookCard = (data) => {
           },
           callback: {
             focusout: (e) => {
-              let inp = e.target,
-                value = inp.value
+              let inp = e.target
+              let value = inp.value
 
-              if (value.includes('%'))
+              if (value.includes('%')) {
                 book.progress = value.replace('%', '')
-              else
+              } else {
                 book.progress = Math.round(+value / +book.pageCount * 100)
+              }                
 
               inp.value = `${book.progress}%`
               inp.style.display = 'none'
               inp.nextSibling.style.display = 'inline-block'
               inp.nextSibling.firstChild.style.width = `${book.progress}%`
+
+              if (+book.progress > 0) {
+                if (book.status === 'to read' || book.status === 'dropped') {
+                  if (confirm('Set this book\'s status to "reading"')) {
+                    _updateStatus({ value: 'reading' })
+                  }
+                } else if (book.status === 'read') {
+                  if (confirm('Set this book\'s status to "rereading"?')) {
+                    _updateStatus({ value: 'rereading' })
+                  }
+                }
+              } else if (+book.progress === 100) {
+                _updateStatus({ value: 'read' })
+              }
             }
           }
         },
         {
           type: 'div',
-          style: {
-            border: '0.8px solid black',
-            backgroundColor: 'grey',
-            display: 'inline-block',
-            width: '115px'
-          },
+          class: 'bar',
           children: [
             {
               type: 'div',
@@ -364,7 +390,7 @@ const createBookCard = (data) => {
                 t.parentElement.style.display = 'none'
                 t.parentElement.previousSibling.style.display = 'inline'
               } else {
-                t.style.display = 'none'
+                t.style.display = 'none'  
                 t.previousSibling.style.display = 'inline'
               }
             }
@@ -383,10 +409,11 @@ const createBookCard = (data) => {
           type: 'select',
           attr: {
             name: 'status',
+            'data-id': `${book.id}-status`
           },
           children: (() => {
             let arr = []
-            let status = ['read', 'reading', 'to read', 'dropped']
+            let status = ['read', 'reading', 'to read', 'dropped', 'rereading']
             status.forEach(stat => {
               arr.push({
                 type: 'option',
@@ -400,17 +427,7 @@ const createBookCard = (data) => {
             return arr;
           })(),
           callback: {
-            change: (e) => {
-              let options = Array.from(e.target.children)
-              options.forEach(opt => {
-                if (opt.value === e.target.value) {
-                  opt.setAttribute('selected', 'selected')
-                  book.status = opt.value
-                } else {
-                  opt.removeAttribute('selected')
-                }    
-              })
-            }
+            change: (e) => _updateStatus(e.target)
           }
         }
       ]
@@ -500,11 +517,17 @@ const createBookCard = (data) => {
       type: 'input',
       attr: {
         type: 'date',
-        id: 'date-read',
-        value: book.dateRead || ''
+        value: book.dateRead || '',
+        'data-id': `${book.id}-dateRead`
       },
       callback: {
         change: (e) => {
+          if (book.status === 'to read' || book.status === 'dropped') {
+            if (confirm('Set this book\'s status to "reading"?')) {
+              _updateStatus({ value: 'reading' })
+            }
+          }          
+
           e.target.setAttribute('value', e.target.value)
           book.dateRead = e.target.value          
         }
@@ -514,11 +537,17 @@ const createBookCard = (data) => {
       type: 'input',
       attr: {
         type: 'date',
-        id: 'date-finished',
-        value: book.dateFinished || ''
+        value: book.dateFinished || '',
+        'data-id': `${book.id}-dateFinished`
       },
       callback: {
         change: (e) => {
+          if (book.status !== 'read' && book.status !== 'rereading') {
+            if (confirm('Set this book\'s status to "read"?')) {
+              _updateStatus({ value: 'read' })
+            }            
+          }
+          
           e.target.setAttribute('value', e.target.value)
           book.dateFinished = e.target.value
         }
@@ -535,21 +564,24 @@ const createBookCard = (data) => {
 }
 
 /* Storage object */
-const storage = ((str) => {
+const storage = (() => {
   let data = window.localStorage
-  let key = str
+  let key = 'data'
 
   const getItems = () => JSON.parse(data.getItem(key))
 
   const reset = () => data.clear()
+
+  const setKey = (str) => {
+    key = str
+  }
 
   const update = (newInfo, condition) => {
     let storedData = getItems()
     let index
 
     storedData.forEach((item, i) => {
-      if (condition(item))
-        index = i
+      if (condition(item)) index = i
     })
 
     storedData[index] = newInfo
@@ -561,8 +593,7 @@ const storage = ((str) => {
     let index
 
     storedData.forEach((item, i) => {
-      if (condition(item))
-        index = i
+      if (condition(item)) index = i
     })
 
     storedData.splice(index, 1)
@@ -572,21 +603,23 @@ const storage = ((str) => {
   const store = (info) => {
     let storedData = getItems()
 
-    if (storedData) 
+    if (storedData) {
       storedData.push(info)
-
+    }
+      
     data.setItem(key, JSON.stringify(storedData || [info]))
   }
 
   return {
     data,
+    setKey,
     getItems,
     reset,
     store,
     update,
     remove,
   }
-})('data')
+})()
 
 
 /* The whole website application */
@@ -608,8 +641,9 @@ const App = (doc => {
 
   const _checkStorage = () => {
     let data = storage.getItems()
-    if (data)
+    if (data) {
       data.forEach(info => library.addToDOM(_renderBook(info)))
+    }
   }
 
   const _showSearchModal = () => {
@@ -642,8 +676,9 @@ const App = (doc => {
   }
 
   const _clearSearchResults = () => {
-    while (searchResults.firstChild)
+    while (searchResults.firstChild) {
       searchResults.removeChild(searchResults.lastChild)
+    }      
   }
 
   const _showSearchResults = (results) => {
@@ -690,24 +725,13 @@ const App = (doc => {
         }              
       }
     })
-    book.addListener('back', 'status', {
-      change: () => storage.update(book.getData(), item => item.id === book.id)
-    })
-    book.addListener('back', 'dateRead', {
-      change: () => storage.update(book.getData(), item => item.id === book.id)
-    })
-    book.addListener('back', 'dateFinished', {
-      change: () => storage.update(book.getData(), item => item.id === book.id)
+    book.addListener('back', '', {
+      change: () => storage.update(book.getData(), item => item.id === book.id),
+      keydown: () => storage.update(book.getData(), item => item.id === book.id),
+      focusout: () => storage.update(book.getData(), item => item.id === book.id)
     })
     book.addListener('back', 'rating', {
       click: () => storage.update(book.getData(), item => item.id === book.id)
-    })
-    book.addListener('back', 'progress', {
-      focusout: () => storage.update(book.getData(), item => item.id === book.id)
-    })
-    book.addListener('back', 'comment', {
-      keydown: () => storage.update(book.getData(), item => item.id === book.id),
-      focusout: () => storage.update(book.getData(), item => item.id === book.id)
     })
 
     return book
