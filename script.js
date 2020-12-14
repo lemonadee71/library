@@ -33,7 +33,6 @@ class Book {
   removeTag(tag) {
     let pattern = new RegExp(`${tag}`, 'g')
     this.tags = this.tags.join('-').replace(pattern, '').split('-').filter(el => el)
-    console.log(this.tags)
   }
 
   removeAllTags() {
@@ -75,8 +74,8 @@ class List {
 
   sortItems(condition) {
     this.items.sort((a, b) => {
-      if (condition(a, b)) return -1
-      return 1
+      if (condition(a, b)) return 1
+      return -1
     })
   }
 }
@@ -97,7 +96,15 @@ class Library extends List {
     this.element.removeChild(book.card)
   }
 
-  filter(str) {
+  renderBooks() {
+    this.items.map((item) => this.element.appendChild(item.card))
+  }
+
+  clearBooks() {
+    [...this.element.children].map((child) => child.remove())
+  }
+
+  filterBooks(str) {
     let flag = str.charAt(0)
     let txt = str.toLowerCase()
 
@@ -136,6 +143,18 @@ class Library extends List {
         }
       }
     })
+  }
+
+  sortBooks(prop, asc = true) {
+    const condition = (a, b) => {
+      if (asc) return a[prop] > b[prop]
+      return a[prop] < b[prop]
+    }
+
+    this.clearBooks()
+    this.sortItems(condition)
+    console.log(this.items, prop, asc)
+    this.renderBooks()
   }
 }
 
@@ -411,7 +430,8 @@ const createBookCard = (data) => {
               class: 'progress',
               style: {
                 background: 'green',
-                width: book.progress ? `${book.progress}%` : '0'
+                cursor: 'pointer',
+                width: `${book.progress}%`
               },
             }
           ],
@@ -649,8 +669,7 @@ const createBookCard = (data) => {
                     },
                     callback: {
                       click: (e) => {
-                        let root = e.target.parentElement.parentElement
-                        root.removeChild(e.target.parentElement)
+                        e.target.parentElement.remove()
                         book.removeTag(tag)
                       }
                     }
@@ -740,7 +759,8 @@ const App = (doc => {
     searchForm = doc.getElementById('searchForm'),
     searchResults = doc.getElementById('searchResults'),
     filter = doc.getElementById('filter'),
-    sorter = doc.getElementById('sorter')
+    sorter = doc.getElementById('sorter'), 
+    sortBtn = doc.getElementById('sort-type')
 
   const library = new Library(doc.getElementById('library'))
 
@@ -748,8 +768,9 @@ const App = (doc => {
     searchBtn.addEventListener('click', _showSearchModal)
     searchModal.addEventListener('click', _hideSearchModal)
     searchForm.addEventListener('submit', _searchBook)
-    filter.addEventListener('keyup', _filterLibrary)
-    //sorter.addEventListener('change', _sortLibrary)
+    filter.addEventListener('keyup', _filterLibrary)  
+    sorter.addEventListener('change', _sortLibrary)
+    sortBtn.addEventListener('change', _sortLibrary)
     _checkStorage()
   }
 
@@ -761,14 +782,21 @@ const App = (doc => {
   }
 
   const _filterLibrary = (e) => {
-    library.filter(e.target.value)
+    library.filterBooks(e.target.value)
   }
 
-  /*
   const _sortLibrary = (e) => {
-    library.sort(e.target.value)
+    let prop, asc
+    if (e.target.value === 'asc' || e.target.value === 'dsc') {
+      prop = doc.getElementById('sorter').value
+      asc = e.target.value === 'asc'
+    } else {
+      prop = e.target.value
+      asc = doc.getElementById('sort-type').value === 'asc'
+    }
+    
+    library.sortBooks(prop, asc)
   }
-  */
 
   const _showSearchModal = () => {
     searchModal.style.display = 'block' 
@@ -800,6 +828,7 @@ const App = (doc => {
   }
 
   const _clearSearchResults = () => {
+    //[...searchResults.children].map(child => child.remove())
     while (searchResults.firstChild) {
       searchResults.removeChild(searchResults.lastChild)
     }      
@@ -843,7 +872,7 @@ const App = (doc => {
         e.stopPropagation()
 
         if (confirm('Are you sure you want to remove this book from your library?')) {
-          book.card.parentElement.removeChild(book.card)
+          book.card.remove()
           storage.remove(item => item.id === book.id)
           library.removeItem(item => item.id === book.id)
         }              
