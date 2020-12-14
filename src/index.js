@@ -22,6 +22,7 @@ const App = (doc => {
     sorter.addEventListener('change', _sortLibrary)
     sortBtn.addEventListener('change', _sortLibrary)
     _checkStorage()
+    library.sortBooks('title', true)
   }
 
   const _checkStorage = () => {
